@@ -58,13 +58,14 @@ jobs:
 
       - name: Parse image metadata
         run: |
+          ROOT_DIR="$PWD"
           export POKY_DIR="$PWD/poky"
           source poky/oe-init-build-env build-parse-${{ matrix.machine }} >/dev/null
-          bitbake-layers add-layer "$PWD/poky/meta-poky"
-          bitbake-layers add-layer "$PWD/poky/meta-yocto-bsp"
-          bitbake-layers add-layer "$PWD/meta-openembedded/meta-oe"
-          bitbake-layers add-layer "$PWD/meta-rockchip"
-          bitbake-layers add-layer "$PWD"
+          bitbake-layers add-layer "$ROOT_DIR/poky/meta-poky"
+          bitbake-layers add-layer "$ROOT_DIR/poky/meta-yocto-bsp"
+          bitbake-layers add-layer "$ROOT_DIR/meta-openembedded/meta-oe"
+          bitbake-layers add-layer "$ROOT_DIR/meta-rockchip"
+          bitbake-layers add-layer "$ROOT_DIR"
           printf 'MACHINE = "%s"\nDISTRO = "poky"\n' \
             '${{ matrix.machine }}' >> conf/local.conf
           bitbake -p seeed-rockchip-image
