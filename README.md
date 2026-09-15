@@ -2,8 +2,9 @@
 
 `meta-seeed-rockchip` is the hardware BSP layer for Seeed Studio reComputer
 Rockchip boards. It contains board machine configuration, device trees,
-boot firmware, U-Boot, kernel, Wi-Fi/BT support, USB gadget support, and
-Rockchip camera runtime recipes.
+boot firmware, U-Boot, kernel, Wi-Fi/BT support, and USB gadget support;
+the Rockchip camera runtime (rkaiq/rkisp) comes from the Rockchip base
+layer's recipes.
 
 ## Supported devices
 

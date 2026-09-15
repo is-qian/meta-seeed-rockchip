@@ -1,0 +1,10 @@
+# Standalone-build dependency checkouts (README / .github/workflows/yocto.yml)
+/poky/
+/bitbake/
+/meta-yocto/
+/meta-openembedded/
+/meta-rockchip/
+
+# Standalone-build outputs
+/build-*/
+/shared-downloads/
