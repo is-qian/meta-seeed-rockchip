@@ -13,7 +13,9 @@ image layout, OTA, container, or boot-environment integration.
 
 ## Dependencies
 
-This layer targets Yocto Project Wrynose and requires these layers:
+This layer currently targets the Yocto Project Wrynose series. The dependency
+paths are kept explicit so a future Yocto series can be added without changing
+the BSP recipe layout. It requires these layers:
 
 - `meta` / OpenEmbedded-Core
 - `meta-openembedded/meta-oe`
@@ -48,19 +50,28 @@ assume a sibling checkout layout.
 
 ## Standalone Yocto build
 
-The standalone build uses Poky, `meta-openembedded/meta-oe`, and
-`meta-rockchip` from the `wrynose` branches. Place those repositories beside
-this layer, then run:
+The standalone build uses OpenEmbedded-Core, BitBake, `meta-yocto`,
+`meta-openembedded/meta-oe`, and `meta-rockchip` from their Wrynose branches.
+
+Place those repositories beside this layer, then run:
 
 ```sh
 POKY_DIR=$PWD/poky ./scripts/build-yocto-image.sh \
     recomputer-rk3588-devkit
 ```
 
+The `POKY_DIR` name is retained for compatibility with the standard Yocto
+environment script; it points to the OpenEmbedded-Core checkout. The
+BitBake checkout is expected at `./bitbake`, and
+`meta-yocto` checkout is expected at `./meta-yocto`, or can be overridden with
+`BITBAKE_DIR` and `META_YOCTO_DIR`.
+
 Use `recomputer-rk3576-devkit` for the RK3576 board. The deploy directory is
 `build-<machine>/tmp/deploy/images/<machine>/`.
 
 ## Continuous integration
 
-GitHub Actions workflow `.github/workflows/yocto.yml` parses and builds the
-standalone image for both supported machines on pushes and pull requests.
+GitHub Actions workflow `.github/workflows/yocto.yml` is manually triggered.
+It lets you select the board set (`all`, RK3576, or RK3588). The current CI
+series is Wrynose; support for newer Yocto releases can be added by changing
+the dependency branch mapping in one workflow step.

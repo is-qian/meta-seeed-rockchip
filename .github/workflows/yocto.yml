@@ -44,7 +44,11 @@ jobs:
       - name: Fetch Yocto layers
         run: |
           git clone --depth 1 --branch wrynose \
-            https://git.yoctoproject.org/poky.git poky
+            https://git.openembedded.org/openembedded-core.git poky
+          git clone --depth 1 --branch 2.18 \
+            https://git.openembedded.org/bitbake.git bitbake
+          git clone --depth 1 --branch wrynose \
+            https://git.yoctoproject.org/meta-yocto.git meta-yocto
           git clone --depth 1 --branch wrynose \
             https://github.com/openembedded/meta-openembedded.git meta-openembedded
           git clone --depth 1 --branch wrynose \
@@ -55,8 +59,8 @@ jobs:
           ROOT_DIR="$PWD"
           export POKY_DIR="$PWD/poky"
           source poky/oe-init-build-env build-parse-${{ matrix.machine }} >/dev/null
-          bitbake-layers add-layer "$ROOT_DIR/poky/meta-poky"
-          bitbake-layers add-layer "$ROOT_DIR/poky/meta-yocto-bsp"
+          bitbake-layers add-layer "$ROOT_DIR/meta-yocto/meta-poky"
+          bitbake-layers add-layer "$ROOT_DIR/meta-yocto/meta-yocto-bsp"
           bitbake-layers add-layer "$ROOT_DIR/meta-openembedded/meta-oe"
           bitbake-layers add-layer "$ROOT_DIR/meta-rockchip"
           bitbake-layers add-layer "$ROOT_DIR"
