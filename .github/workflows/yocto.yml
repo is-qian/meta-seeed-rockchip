@@ -1,20 +1,6 @@
 name: Yocto image
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '**.bb'
-      - '**.bbappend'
-      - '**.conf'
-      - '**.inc'
-      - '**.dts'
-      - '**.cfg'
-      - 'COPYING.MIT'
-      - 'README.md'
-      - 'scripts/**'
-      - '.github/workflows/yocto.yml'
-  pull_request:
   workflow_dispatch:
     inputs:
       machine:
