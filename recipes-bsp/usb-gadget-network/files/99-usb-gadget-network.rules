@@ -1,0 +1,4 @@
+# Start (or re-run) the USB gadget service whenever a UDC appears: at boot
+# udev emits "add" for the already-present controller (coldplug) and again
+# on every Type-C replug that puts dwc3 into peripheral mode.
+ACTION=="add", SUBSYSTEM=="udc", ENV{SYSTEMD_WANTS}+="usb-gadget-network.service"

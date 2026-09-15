@@ -1,0 +1,48 @@
+Subject: [PATCH] fiq_debugger: close the console-thread lost-wakeup race
+
+wake_up_console_thread() only calls wake_up_process() when
+console_thread_running is false.  The console thread, however, only
+stores that false value after it has re-observed both kfifo queues
+empty and is about to schedule().  A producer (bash writing its prompt,
+or any tty_write burst) that enqueues data in the window between the
+thread's emptiness check and the running=false store gets its wakeup
+skipped, and the thread then sleeps with a non-empty fifo.  The serial
+console stalls until some later event - typically a keystroke whose
+echo travels through fiq_tty_write - finally wakes the thread, which
+then flushes the whole backlog at once.
+
+This is visible on affected images as prompts that only print their
+first few characters and command output that appears in one burst
+after pressing Enter several times.
+
+Re-check the fifos after publishing running=false and resume draining
+instead of sleeping when new data arrived in the window.  A producer
+that arrives after the store still performs wake_up_process() itself,
+so no wakeup is lost either way.
+
+Upstream-Status: Pending
+---
+--- a/drivers/soc/rockchip/fiq_debugger/rk_fiq_debugger.c	2026-08-27 16:51:04.820538083 +0800
++++ b/drivers/soc/rockchip/fiq_debugger/rk_fiq_debugger.c	2026-08-27 16:51:04.843696924 +0800
+@@ -359,6 +359,21 @@
+ 		set_current_state(TASK_INTERRUPTIBLE);
+ 		if (console_thread_stop || (kfifo_is_empty(&fifo) && kfifo_is_empty(&tty_fifo))) {
+ 			smp_store_mb(console_thread_running, false);
++			/*
++			 * wake_up_console_thread() skips the wakeup while
++			 * console_thread_running is true, so a producer that
++			 * queued data between the emptiness check above and
++			 * this store would never wake us (lost wakeup): the
++			 * console then stalls until the next input event
++			 * re-echoes through the tty.  Re-check the fifos after
++			 * publishing the false value and keep draining if new
++			 * data arrived; a producer landing after the store
++			 * still takes the wake_up_process() path itself.
++			 */
++			if (unlikely(!kfifo_is_empty(&fifo) || !kfifo_is_empty(&tty_fifo))) {
++				smp_store_mb(console_thread_running, true);
++				continue;
++			}
+ 			schedule();
+ 			smp_store_mb(console_thread_running, true);
+ 		}

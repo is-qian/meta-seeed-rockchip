@@ -1,0 +1,22 @@
+Upstream-Status: Inappropriate [userspace ABI sync with the closed rkaiq stack]
+
+diff --git a/include/uapi/linux/rk-isp2-config.h b/include/uapi/linux/rk-isp2-config.h
+index 77b04f9e6..aa136ed99 100644
+--- a/include/uapi/linux/rk-isp2-config.h
++++ b/include/uapi/linux/rk-isp2-config.h
+@@ -334,7 +334,14 @@
+ 
+ #define ISP2X_FBCBUF_FD_NUM		64
+ 
+-#define ISP2X_MESH_BUF_NUM		3
++/* Keep in sync with the userspace ABI Seeed ships (camera-engine-rkaiq
++ * deb and the deb_source tree both carry 2).  RKISP_CMD_GET_MESHBUF_INFO
++ * encodes sizeof(struct rkisp_meshbuf_info) in its ioctl command number,
++ * so a kernel built with 3 rejects the userspace command with ENOTTY and
++ * rkaiq_3A_server SEGVs during CAC mesh-buffer setup (RK3576 bring-up,
++ * 2026-09).  Armbian's vendor kernel carries 2 as well.
++ */
++#define ISP2X_MESH_BUF_NUM		2
+ 
+ #define RKISP_BUFFER_MAX		8
+ struct rkisp_buf_info {

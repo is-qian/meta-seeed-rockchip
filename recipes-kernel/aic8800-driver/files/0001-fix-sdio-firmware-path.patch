@@ -1,0 +1,19 @@
+Point the driver build at the location the aic8800-firmware package
+installs into instead of the Android vendor path.
+
+Upstream-Status: Inappropriate [distro firmware location]
+
+diff --git a/aic8800_bsp/Makefile b/aic8800_bsp/Makefile
+index 8701cdc..71685f0 100644
+--- a/aic8800_bsp/Makefile
++++ b/aic8800_bsp/Makefile
+@@ -1,7 +1,7 @@
+ CONFIG_SDIO_SUPPORT := y
+ CONFIG_SDIO_PWRCTRL := n
+-CONFIG_AIC_FW_PATH = "/vendor/etc/firmware"
+-#CONFIG_AIC_FW_PATH = "/lib/firmware/aic8800D80"
++#CONFIG_AIC_FW_PATH = "/vendor/etc/firmware"
++CONFIG_AIC_FW_PATH = "/lib/firmware/aic8800_fw/SDIO"
+ export CONFIG_AIC_FW_PATH
+ ccflags-y += -DCONFIG_AIC_FW_PATH=\"$(CONFIG_AIC_FW_PATH)\"
+ 

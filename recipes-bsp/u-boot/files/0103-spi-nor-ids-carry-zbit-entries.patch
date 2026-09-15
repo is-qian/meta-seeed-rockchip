@@ -1,0 +1,50 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Seeed Rockchip BSP <noreply@example.invalid>
+Date: Tue, 9 Sep 2026 00:00:00 +0800
+Subject: [PATCH] mtd: spi-nor-ids: carry the ZBIT entries
+
+The Radxa tree's spi_nor_ids table has no ZBIT section, so the SPL's
+spi-nor probe path rejects the board's ZB25VQ128 (JEDEC 5e 40 18)
+with "unrecognized JEDEC id bytes" and SPI boot dies before loading
+the U-Boot FIT ("failed to boot from all boot devices").  The vendor
+rkflash sfc table (sfc_nor.c) knows the chip, which is why U-Boot
+proper and the maskrom usbplug path work while the SPL does not.
+
+Add the four ZBIT entries from the SDK tree verbatim, guarded by the
+existing CONFIG_SPI_FLASH_ZBIT (enabled in the board defconfig).
+
+Upstream-Status: Inappropriate [board-specific vendor pairing]
+---
+diff --git a/drivers/mtd/spi/spi-nor-ids.c b/drivers/mtd/spi/spi-nor-ids.c
+index ffe174c8c3d..a97286843ba 100644
+--- a/drivers/mtd/spi/spi-nor-ids.c
++++ b/drivers/mtd/spi/spi-nor-ids.c
+@@ -570,6 +570,13 @@ const struct flash_info spi_nor_ids[] = {
+ #ifdef CONFIG_SPI_FLASH_NORMEM
+ 	/* NORMEM Microelectronics Co., Ltd. */
+ 	{ INFO("NM25Q128EVB", 0x522118, 0, 64 * 1024, 256, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
++#endif
++#ifdef CONFIG_SPI_FLASH_ZBIT
++	/* Zbit Microelectronics Co., Ltd. */
++	{ INFO("ZB25Q256A", 0x5E4019, 0, 64 * 1024, 512, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES) },
++	{ INFO("ZB25VQ64", 0x5e4017, 0, 64 * 1024, 128, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
++	{ INFO("ZB25VQ128", 0x5e4018, 0, 64 * 1024, 256, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
++	{ INFO("ZB25LQ128", 0x5e5018, 0, 64 * 1024, 256, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
+ #endif
+ 	{ },
+ };
+
+diff --git a/drivers/mtd/spi/Kconfig b/drivers/mtd/spi/Kconfig
+--- a/drivers/mtd/spi/Kconfig
++++ b/drivers/mtd/spi/Kconfig
+@@ -137,6 +137,11 @@ config SPI_FLASH_STMICRO
+ 	help
+ 	  Add support for various STMicro SPI flash chips (M25Pxxx and N25Qxxx)
+ 
++config SPI_FLASH_ZBIT
++	bool "ZBIT SPI flash support"
++	help
++	  Add support for ZBIT SPI flash chips (ZB25 series)
++
+ config SPI_FLASH_WINBOND
+ 	bool "Winbond SPI flash support"

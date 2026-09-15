@@ -1,0 +1,36 @@
+From: Seeed Rockchip BSP
+Subject: [PATCH] aic8800: default to LOGERROR|LOGINFO only
+
+The radxa-pkg build enables every debug class (LOGTRACE/LOGDEBUG/LOGFW)
+by default, which floods the kernel log and the serial console with
+per-beacon and per-message traces (rwnx_rx_handle_msg spam during
+scans).  Keep errors and the INFO identity lines (chipmatch, firmware
+path, clock) that the test documentation relies on, drop the rest.
+The fdrv level stays runtime-tunable via /sys/module/aic8800_fdrv/
+parameters/aicwf_dbg_level if verbose tracing is ever needed.
+
+Upstream-Status: Inappropriate [default debug configuration]
+---
+--- a/aic8800_fdrv/rwnx_main.c
++++ b/aic8800_fdrv/rwnx_main.c
+@@ -535,7 +535,7 @@
+ 
+ 
+ extern uint8_t scanning;
+-int aicwf_dbg_level = LOGERROR|LOGINFO|LOGDEBUG|LOGTRACE|LOGFW;
++int aicwf_dbg_level = LOGERROR|LOGINFO;
+ module_param(aicwf_dbg_level, int, 0660);
+ #ifdef CONFIG_DYNAMIC_PWR
+ int dynamic_pwr = 1;
+--- a/aic8800_bsp/aic_bsp_main.c
++++ b/aic8800_bsp/aic_bsp_main.c
+@@ -15,7 +15,8 @@
+ #define DRV_AUTHOR            "AICSemi"
+ #define DRV_VERS_MOD          "1.0"
+ 
+-int aicwf_dbg_level_bsp = LOGERROR|LOGINFO|LOGDEBUG|LOGTRACE;
++/* not registered as a module_param: quiet by default, no runtime knob */
++int aicwf_dbg_level_bsp = LOGERROR|LOGINFO;
+ 
+ struct semaphore aicbsp_probe_semaphore;
+ 

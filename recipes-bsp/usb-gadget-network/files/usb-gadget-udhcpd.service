@@ -1,0 +1,17 @@
+[Unit]
+Description=DHCP server for the USB NCM gadget link (usb0)
+Documentation=https://udhcp.busybox.net/
+# The config is (re)written by setup-usb-gadget-network.sh on every gadget
+# (re)composition; the unit is (re)started from that script, so the daemon
+# lives in its own cgroup and survives the oneshot unit going inactive.
+ConditionPathExists=/run/usb-gadget/udhcpd.conf
+After=usb-gadget-network.service
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/udhcpd -f /run/usb-gadget/udhcpd.conf
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

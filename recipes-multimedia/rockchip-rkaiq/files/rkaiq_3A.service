@@ -1,0 +1,23 @@
+[Unit]
+Description=Rockchip 3A Image Quality Server
+# Unit design from Seeed's source-built camera-engine-rkaiq package
+# (deb_source v6.0x8.0 tree).  The engine binds sensors through the media
+# graph and does not need the Rockchip rkmodule driver API, so the Pi
+# Camera v3 (imx708) gets full 3A with the shipped IQ profile.
+After=dev-media0.device
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/rkaiq_3A_server
+Restart=on-failure
+RestartSec=2
+# The server blocks in an infinite stream-event wait and never exits on
+# SIGTERM; cap the stop timeout instead of waiting the 90s default.
+TimeoutStopSec=3
+# Safety net for a chain left enabled with no module seated (ghost-camera
+# crashes the server): give up instead of crash-looping.
+StartLimitIntervalSec=30
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target

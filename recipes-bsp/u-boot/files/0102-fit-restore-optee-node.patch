@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Seeed Rockchip BSP <noreply@example.invalid>
+Date: Mon, 8 Sep 2026 00:00:00 +0800
+Subject: [PATCH] rockchip: restore the OP-TEE node in the generated FIT
+
+Radxa's next-dev-v2024.10 make_fit_atf.sh ships with gen_bl32_node
+commented out, so u-boot.itb would carry no OP-TEE stage.  The reComputer
+boot chain packages BL31 + OP-TEE + U-Boot in the FIT; the pinned rkbin TEE
+blob is staged as tee.bin by the recipe before the generator runs, matching
+the SDK tree this recipe used before. Restore the call.
+
+Upstream-Status: Pending
+---
+ arch/arm/mach-rockchip/make_fit_atf.sh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/mach-rockchip/make_fit_atf.sh b/arch/arm/mach-rockchip/make_fit_atf.sh
+index 045273e..32ef33b 100755
+--- a/arch/arm/mach-rockchip/make_fit_atf.sh
++++ b/arch/arm/mach-rockchip/make_fit_atf.sh
+@@ -10,7 +10,7 @@ source ./${srctree}/arch/arm/mach-rockchip/fit_nodes.sh
+ gen_header
+ gen_uboot_node
+ gen_bl31_node
+-#gen_bl32_node
++gen_bl32_node
+ gen_mcu_node
+ gen_loadable_node
+ gen_kfdt_node

@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Seeed Studio <support@seeed.cc>
+Date: Tue, 25 Aug 2026 00:00:00 +0800
+Subject: [PATCH] power: charge_animation: initialize fuel-gauge status
+
+Newer GCC versions used by Yocto Wrynose diagnose the debug path as
+possibly reading soc and current before the first successful fuel-gauge
+poll. Initialize all status values so the vendor U-Boot tree builds with
+-Werror=maybe-uninitialized.
+
+Regenerated for the radxa next-dev-v2024.10 tree (the declaration sits
+three lines below its old SDK position and the original zero-context
+hunk no longer located).
+
+Upstream-Status: Inappropriate [vendor tree build compatibility]
+---
+diff --git a/drivers/power/charge_animation.c b/drivers/power/charge_animation.c
+index 89c5db2..dc3ec53 100644
+--- a/drivers/power/charge_animation.c
++++ b/drivers/power/charge_animation.c
+@@ -579,7 +579,7 @@ static int charge_animation_show(struct udevice *dev)
+ 	ulong delta;
+ 	ulong ms = 0, sec = 0;
+ 	int start_idx = 0, show_idx = -1, old_show_idx = IMAGE_RECALC_IDX;
+-	int soc, voltage, current, key_state;
++	int soc = 0, voltage = 0, current = 0, key_state;
+ 	int i, charging = 1, ret;
+ 	int boot_mode;
+ 	int first_poll_fg = 1;

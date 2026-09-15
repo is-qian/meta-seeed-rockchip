@@ -1,0 +1,54 @@
+From: Seeed Rockchip BSP
+Subject: [PATCH] fiq_debugger: make tty-output wakeups lossless and bound stall latency
+
+The serial prompt (a tty write without trailing newline) still stalls
+after a few characters: it only completes when the next serial input
+event re-enters the tty path.  Two hardening changes:
+
+1. tty_write() wakes the console thread unconditionally.  The
+   conditional wake in wake_up_console_thread() exists to avoid a
+   pi_lock/console_lock deadlock for the printk path; tty writes run
+   in process context without the console lock, so the restriction
+   does not apply and only loses wakeups here.
+
+2. The console thread sleeps with a 20 ms timeout instead of an
+   unbounded schedule(), so any wakeup lost on a path not covered by
+   the explicit wakes self-heals within 20 ms instead of stalling
+   until serial input arrives.
+
+Upstream-Status: Pending
+
+--- a/drivers/soc/rockchip/fiq_debugger/rk_fiq_debugger.c
++++ b/drivers/soc/rockchip/fiq_debugger/rk_fiq_debugger.c
+@@ -374,7 +374,13 @@
+ 				smp_store_mb(console_thread_running, true);
+ 				continue;
+ 			}
+-			schedule();
++			/*
++			 * Bounded sleep: if any wakeup is ever lost on a
++			 * path the explicit wakes do not cover, output
++			 * resumes after at most this delay instead of
++			 * stalling until the next serial input.
++			 */
++			schedule_timeout(msecs_to_jiffies(20));
+ 			smp_store_mb(console_thread_running, true);
+ 		}
+ 		if (kthread_should_stop())
+@@ -466,7 +472,15 @@
+ 
+ 		if (ret <= 0)
+ 			return 0;
+-		wake_up_console_thread(t->console_task);
++		/*
++		 * tty writes run in process context and never hold the
++		 * console lock, so the conditional wakeup in
++		 * wake_up_console_thread() (an anti-deadlock measure
++		 * for the printk path) is not needed here.  Wake the
++		 * console thread unconditionally so no user-visible
++		 * output can lose its wakeup.
++		 */
++		wake_up_process(t->console_task);
+ 	}
+ 	return count;
+ }

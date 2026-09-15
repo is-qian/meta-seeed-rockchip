@@ -1,0 +1,36 @@
+From 4e8a9c0d1f3e5b6a7c8d9e0f123456789abcdef02 Mon Sep 17 00:00:00 2001
+From: Seeed Studio <support@seeed.cc>
+Date: Wed, 3 Sep 2026 00:00:00 +0800
+Subject: [PATCH] rockchip: usbplug: guard the RK3576 SCSI bootdev entry
+
+The RK3576 dev_list starts with {IF_TYPE_SCSI, 0, 0}.  The switch case
+for IF_TYPE_SCSI is only compiled when CONFIG_SCSI + CONFIG_CMD_SCSI +
+(AHCI || UFS) are set; with those disabled (this board has no UFS and
+the link training stalls maskrom download for ~20 s) the first
+dev_list entry falls through to the default branch, prints
+"Bootdev 0x2 is not support" (IF_TYPE_SCSI == 2) and aborts
+board_init() before the MMC/MTD devices are ever scanned.  Guard the
+list entry with the same condition as the case so the scan simply
+starts at eMMC.
+
+Upstream-Status: Inappropriate [board configuration]
+---
+ arch/arm/mach-rockchip/usbplug.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm/mach-rockchip/usbplug.c b/arch/arm/mach-rockchip/usbplug.c
+index 0525dca94..d1459a071 100644
+--- a/arch/arm/mach-rockchip/usbplug.c
++++ b/arch/arm/mach-rockchip/usbplug.c
+@@ -32,7 +32,9 @@ static const struct bootdev_list dev_list[] = {
+ };
+ #elif CONFIG_IS_ENABLED(ROCKCHIP_RK3576)
+ static const struct bootdev_list dev_list[] = {
++#if defined(CONFIG_SCSI) && defined(CONFIG_CMD_SCSI) && (defined(CONFIG_AHCI) || defined(CONFIG_UFS)) /* scsi bootdev needs scsi support */
+ 	{IF_TYPE_SCSI, 0, 0},
++#endif
+ 	{IF_TYPE_MMC, 0, 0},
+ 	{IF_TYPE_MTD, 1, 0}, /* BLK_MTD_SPI_NAND FSPI0 M0 */
+ 	{IF_TYPE_MTD, 1, 1}, /* BLK_MTD_SPI_NAND FSPI1 M0 */
+--
+2.43.0

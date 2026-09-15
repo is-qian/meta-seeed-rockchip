@@ -1,0 +1,14 @@
+[Unit]
+Description=USB NCM network gadget (Type-C OTG)
+Documentation=https://www.kernel.org/doc/Documentation/usb/gadget_configfs.txt
+ConditionPathExists=/sys/kernel/config/usb_gadget
+
+[Service]
+Type=oneshot
+# No RemainAfterExit: the unit returns to inactive so the udev rule can
+# re-trigger it on every controller (re)appearance in peripheral mode.
+SyslogIdentifier=usb-gadget-network
+ExecStart=/usr/bin/setup-usb-gadget-network.sh
+
+[Install]
+WantedBy=usb-gadget.target
