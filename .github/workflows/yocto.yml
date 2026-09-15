@@ -48,6 +48,10 @@ jobs:
             python3-pexpect python3-subunit socat texinfo unzip \
             wget xterm xz-utils zstd
 
+      - name: Enable BitBake user namespaces
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Fetch Yocto layers
         run: |
           YOCTO_VERSION='${{ inputs.yocto_version }}'
