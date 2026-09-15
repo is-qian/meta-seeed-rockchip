@@ -12,6 +12,13 @@ on:
           - recomputer-rk3576-devkit
           - recomputer-rk3588-devkit
         default: all
+      yocto_version:
+        description: Yocto release series
+        required: true
+        type: choice
+        options:
+          - wrynose
+        default: wrynose
 
 concurrency:
   group: yocto-${{ github.workflow }}-${{ github.ref }}
@@ -43,22 +50,23 @@ jobs:
 
       - name: Fetch Yocto layers
         run: |
-          git clone --depth 1 --branch wrynose \
+          YOCTO_VERSION='${{ inputs.yocto_version }}'
+          git clone --depth 1 --branch "$YOCTO_VERSION" \
             https://git.openembedded.org/openembedded-core.git poky
           git clone --depth 1 --branch 2.18 \
             https://git.openembedded.org/bitbake.git bitbake
-          git clone --depth 1 --branch wrynose \
+          git clone --depth 1 --branch "$YOCTO_VERSION" \
             https://git.yoctoproject.org/meta-yocto.git meta-yocto
-          git clone --depth 1 --branch wrynose \
+          git clone --depth 1 --branch "$YOCTO_VERSION" \
             https://github.com/openembedded/meta-openembedded.git meta-openembedded
-          git clone --depth 1 --branch wrynose \
+          git clone --depth 1 --branch "$YOCTO_VERSION" \
             https://github.com/JeffyCN/meta-rockchip.git meta-rockchip
 
       - name: Parse image metadata
         run: |
           ROOT_DIR="$PWD"
           export POKY_DIR="$PWD/poky"
-          source poky/oe-init-build-env build-parse-${{ matrix.machine }} >/dev/null
+          source poky/oe-init-build-env build-parse-${{ inputs.yocto_version }}-${{ matrix.machine }} >/dev/null
           bitbake-layers add-layer "$ROOT_DIR/meta-yocto/meta-poky"
           bitbake-layers add-layer "$ROOT_DIR/meta-yocto/meta-yocto-bsp"
           bitbake-layers add-layer "$ROOT_DIR/meta-openembedded/meta-oe"
@@ -74,12 +82,12 @@ jobs:
           ./scripts/build-yocto-image.sh \
             '${{ matrix.machine }}' \
             seeed-rockchip-image \
-            build-${{ matrix.machine }}
+            build-${{ inputs.yocto_version }}-${{ matrix.machine }}
 
       - name: Upload deploy artifacts
         uses: actions/upload-artifact@v4
         with:
           name: yocto-${{ matrix.machine }}
-          path: build-${{ matrix.machine }}/tmp/deploy/images/${{ matrix.machine }}/
+          path: build-${{ inputs.yocto_version }}-${{ matrix.machine }}/tmp/deploy/images/${{ matrix.machine }}/
           if-no-files-found: error
           retention-days: 14

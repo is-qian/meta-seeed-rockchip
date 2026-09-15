@@ -72,6 +72,6 @@ Use `recomputer-rk3576-devkit` for the RK3576 board. The deploy directory is
 ## Continuous integration
 
 GitHub Actions workflow `.github/workflows/yocto.yml` is manually triggered.
-It lets you select the board set (`all`, RK3576, or RK3588). The current CI
-series is Wrynose; support for newer Yocto releases can be added by changing
-the dependency branch mapping in one workflow step.
+It lets you select the board set (`all`, RK3576, or RK3588) and exposes a
+Yocto-version selector that defaults to `wrynose`. The current CI supports
+Wrynose; future series can be added by extending the branch mapping.
