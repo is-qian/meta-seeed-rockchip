@@ -1,0 +1,86 @@
+name: Yocto image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**.bb'
+      - '**.bbappend'
+      - '**.conf'
+      - '**.inc'
+      - '**.dts'
+      - '**.cfg'
+      - 'COPYING.MIT'
+      - 'README.md'
+      - 'scripts/**'
+      - '.github/workflows/yocto.yml'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: yocto-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.machine }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        machine:
+          - recomputer-rk3576-devkit
+          - recomputer-rk3588-devkit
+
+    steps:
+      - name: Checkout layer
+        uses: actions/checkout@v4
+
+      - name: Install Yocto host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bc build-essential chrpath cpio diffstat file gawk git \
+            iputils-ping libacl1 libegl1-mesa liblz4-tool libsdl1.2-dev \
+            mesa-common-dev pylint3 python3 python3-git python3-jinja2 \
+            python3-pexpect python3-subunit socat texinfo unzip \
+            wget xterm xz-utils zstd
+
+      - name: Fetch Yocto layers
+        run: |
+          git clone --depth 1 --branch wrynose \
+            https://git.yoctoproject.org/poky.git poky
+          git clone --depth 1 --branch wrynose \
+            https://github.com/openembedded/meta-openembedded.git meta-openembedded
+          git clone --depth 1 --branch wrynose \
+            https://github.com/JeffyCN/meta-rockchip.git meta-rockchip
+
+      - name: Parse image metadata
+        run: |
+          export POKY_DIR="$PWD/poky"
+          source poky/oe-init-build-env build-parse-${{ matrix.machine }} >/dev/null
+          bitbake-layers add-layer "$PWD/poky/meta-poky"
+          bitbake-layers add-layer "$PWD/poky/meta-yocto-bsp"
+          bitbake-layers add-layer "$PWD/meta-openembedded/meta-oe"
+          bitbake-layers add-layer "$PWD/meta-rockchip"
+          bitbake-layers add-layer "$PWD"
+          printf 'MACHINE = "%s"\nDISTRO = "poky"\n' \
+            '${{ matrix.machine }}' >> conf/local.conf
+          bitbake -p seeed-rockchip-image
+
+      - name: Build image
+        run: |
+          export POKY_DIR="$PWD/poky"
+          ./scripts/build-yocto-image.sh \
+            '${{ matrix.machine }}' \
+            seeed-rockchip-image \
+            build-${{ matrix.machine }}
+
+      - name: Upload deploy artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: yocto-${{ matrix.machine }}
+          path: build-${{ matrix.machine }}/tmp/deploy/images/${{ matrix.machine }}/
+          if-no-files-found: error
+          retention-days: 14
