@@ -3,8 +3,7 @@
 `meta-seeed-rockchip` is the hardware BSP layer for Seeed Studio reComputer
 Rockchip boards. It contains board machine configuration, device trees,
 boot firmware, U-Boot, kernel, Wi-Fi/BT support, USB gadget support, and
-Rockchip camera runtime recipes. It deliberately contains no Balena runtime,
-image layout, OTA, container, or boot-environment integration.
+Rockchip camera runtime recipes.
 
 ## Supported devices
 
@@ -22,10 +21,6 @@ the BSP recipe layout. It requires these layers:
 - the Rockchip base layer that provides the `rockchip` collection and its SoC
   machine includes
 
-For BalenaOS builds, add `meta-balena-rockchip` as a separate overlay layer.
-It depends on this layer's `seeed-rockchip` collection and adds all Balena
-specific recipes and configuration.
-
 ## Source pins
 
 The board recipes intentionally pin the vendor source revisions used by the
@@ -41,8 +36,8 @@ supported machines:
 Add the layer to `BBLAYERS` and select one of the supported machine names.
 The layer also provides `seeed-rockchip-image`, a small standalone image
 based on `core-image-minimal`. It is intended for hardware bring-up and CI;
-it does not define a Balena partition layout, OTA scheme, or container
-runtime.
+product-specific partitioning, OTA, and container integration remain the
+responsibility of the consuming distribution layer.
 
 The layer exports `SEEED_ROCKCHIP_LAYERDIR` from `conf/layer.conf` for
 optional overlay layers. Consumers should use that variable rather than

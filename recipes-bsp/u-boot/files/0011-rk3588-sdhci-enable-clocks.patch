@@ -1,4 +1,4 @@
-From: Balena RK3588 integration
+From: Seeed Rockchip BSP
 Subject: [PATCH] rockchip_sdhci: enable all DT clocks and mirror the kernel HOST_CTRL3 clock-gate clear
 
 Two differences against the kernel driver remain after the reset-pulse

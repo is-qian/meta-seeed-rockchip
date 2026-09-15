@@ -1,4 +1,4 @@
-From: Balena RK3588 integration
+From: Seeed Rockchip BSP
 Subject: [PATCH] rockchip_sdhci: pulse the device-tree reset lines at probe
 
 The kernel's rk35xx_sdhci_reset() (drivers/mmc/host/sdhci-of-dwcmshc.c)

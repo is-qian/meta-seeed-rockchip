@@ -1,4 +1,4 @@
-From: Balena RK3588 integration
+From: Seeed Rockchip BSP
 Subject: [PATCH] nvme: scan: enumerate PCI before probing NVMe devices
 
 This vendor tree's common/board_r.c guards its pci_init() call with

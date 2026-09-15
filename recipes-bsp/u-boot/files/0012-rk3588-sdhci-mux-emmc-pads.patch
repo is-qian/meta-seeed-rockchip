@@ -1,4 +1,4 @@
-From: Balena RK3588 integration
+From: Seeed Rockchip BSP
 Subject: [PATCH] rockchip_sdhci: mux the shared eMMC/FSPI pads back to eMMC (U-Boot proper only)
 
 eMMC and FSPI-m0 share the GPIO2A/GPIO2D pads on RK3588 (emmc = iomux
