@@ -82,7 +82,6 @@ jobs:
           export POKY_DIR="$PWD/poky"
           source poky/oe-init-build-env build-parse-${{ inputs.yocto_version }}-${{ matrix.machine }} >/dev/null
           bitbake-layers add-layer "$ROOT_DIR/meta-yocto/meta-poky"
-          bitbake-layers add-layer "$ROOT_DIR/meta-yocto/meta-yocto-bsp"
           bitbake-layers add-layer "$ROOT_DIR/meta-openembedded/meta-oe"
           bitbake-layers add-layer "$ROOT_DIR/meta-rockchip"
           bitbake-layers add-layer "$ROOT_DIR"

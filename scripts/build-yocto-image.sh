@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail
 
 MACHINE="${1:?usage: $0 <machine> [image] [build-dir]}"
 IMAGE="${2:-seeed-rockchip-image}"
@@ -22,7 +22,6 @@ fi
 
 for required_layer in \
     "${META_YOCTO_DIR}/meta-poky" \
-    "${META_YOCTO_DIR}/meta-yocto-bsp" \
     "${META_OPENEMBEDDED_DIR}/meta-oe" \
     "${META_ROCKCHIP_DIR}"; do
     if [[ ! -d "${required_layer}" ]]; then
@@ -35,7 +34,6 @@ done
 source "${POKY_DIR}/oe-init-build-env" "${BUILD_DIR}" >/dev/null
 
 bitbake-layers add-layer "${META_YOCTO_DIR}/meta-poky"
-bitbake-layers add-layer "${META_YOCTO_DIR}/meta-yocto-bsp"
 bitbake-layers add-layer "${META_OPENEMBEDDED_DIR}/meta-oe"
 bitbake-layers add-layer "${META_ROCKCHIP_DIR}"
 bitbake-layers add-layer "${LAYER_DIR}"
