@@ -28,7 +28,10 @@ jobs:
   build:
     name: ${{ matrix.machine }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    # A cold full build on the 4-vCPU public runner needs ~4.5-5 h; the
+    # previous 3 h cap canceled the job at 67% of tasks.  360 min is the
+    # GitHub Actions job maximum.
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
@@ -36,7 +39,7 @@ jobs:
 
     steps:
       - name: Checkout layer
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Yocto host dependencies
         run: |
@@ -92,10 +95,17 @@ jobs:
       - name: Build image
         run: |
           export POKY_DIR="$PWD/poky"
+          BUILD_DIR="build-${{ inputs.yocto_version }}-${{ matrix.machine }}"
+          # Drop each recipe's work dir once packaged so the runner's
+          # ~20 GiB of free disk survives image assembly.  The build
+          # script appends to an existing conf/local.conf, so seed it
+          # before the call.
+          mkdir -p "$BUILD_DIR/conf"
+          printf 'INHERIT += "rm_work"\n' >> "$BUILD_DIR/conf/local.conf"
           ./scripts/build-yocto-image.sh \
             '${{ matrix.machine }}' \
             seeed-rockchip-image \
-            build-${{ inputs.yocto_version }}-${{ matrix.machine }}
+            "$BUILD_DIR"
 
       - name: Upload deploy artifacts
         uses: actions/upload-artifact@v4
