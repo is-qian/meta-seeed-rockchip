@@ -52,6 +52,8 @@ assume a sibling checkout layout.
 
 The standalone build uses OpenEmbedded-Core, BitBake, `meta-yocto`,
 `meta-openembedded/meta-oe`, and `meta-rockchip` from their Wrynose branches.
+CI additionally pins those dependencies to known-good commits so upstream
+branch movement does not make a build non-reproducible.
 
 Place those repositories beside this layer, then run:
 

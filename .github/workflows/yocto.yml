@@ -65,6 +65,11 @@ jobs:
             https://github.com/openembedded/meta-openembedded.git meta-openembedded
           git clone --depth 1 --branch "$YOCTO_VERSION" \
             https://github.com/JeffyCN/meta-rockchip.git meta-rockchip
+          git -C poky checkout --detach ef022bf82d79015802309d14c28b13373ebe53f5
+          git -C bitbake checkout --detach 0ad6c1c34a5e07a5f8dd66ab248c1e7b37b69fa9
+          git -C meta-yocto checkout --detach 1b132647002eea43a2c7a7f857f63f42dacbc26c
+          git -C meta-openembedded checkout --detach 6bf0d8ad57b33950bab4c7f6c037e1ccb6f6e2eb
+          git -C meta-rockchip checkout --detach b2393c23f16e6230025499015610d8c0018b1ea7
 
       - name: Parse image metadata
         run: |
