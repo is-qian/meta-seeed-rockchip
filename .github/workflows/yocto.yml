@@ -16,6 +16,16 @@ on:
       - '.github/workflows/yocto.yml'
   pull_request:
   workflow_dispatch:
+    inputs:
+      machine:
+        description: Board to build
+        required: true
+        type: choice
+        options:
+          - all
+          - recomputer-rk3576-devkit
+          - recomputer-rk3588-devkit
+        default: all
 
 concurrency:
   group: yocto-${{ github.workflow }}-${{ github.ref }}
@@ -29,9 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        machine:
-          - recomputer-rk3576-devkit
-          - recomputer-rk3588-devkit
+        machine: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.machine != 'all') && format('["{0}"]', inputs.machine) || '["recomputer-rk3576-devkit", "recomputer-rk3588-devkit"]') }}
 
     steps:
       - name: Checkout layer
