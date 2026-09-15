@@ -1,0 +1,64 @@
+From: Balena RK3588 integration
+Subject: [PATCH] rockchip_sdhci: enable all DT clocks and mirror the kernel HOST_CTRL3 clock-gate clear
+
+Two differences against the kernel driver remain after the reset-pulse
+fix, both visible when diffing dwcmshc_rk3568_set_clock() against
+dwcmshc_sdhci_emmc_set_clock() for the <=52 MHz identify path:
+
+1. The kernel sets HOST_CTRL3 bit 4 ("disable internal clock gate")
+   together with the cmd-conflict-check clear; the U-Boot driver only
+   cleared bit 0.
+
+2. The kernel enables every clock declared in the device tree
+   (core/bus/axi/block/timer via clk_bulk); this driver only ever set
+   the rate of clock index 0.  A CRU reset that leaves the
+   aclk/bclk/tmclk gates closed does not stop register access but
+   stops the card clock, which is indistinguishable from a dead card
+   ("Card did not respond to voltage select", -95).
+
+Upstream-Status: Pending
+
+--- a/drivers/mmc/rockchip_sdhci.c
++++ b/drivers/mmc/rockchip_sdhci.c
+@@ -411,9 +411,10 @@
+ 		/* disable dll */
+ 		sdhci_writel(host, 0, DWCMSHC_EMMC_DLL_CTRL);
+ 
+-		/* Disable cmd conflict check */
++		/* Disable cmd conflict check and disable internal clock gate */
+ 		extra = sdhci_readl(host, DWCMSHC_HOST_CTRL3);
+ 		extra &= ~BIT(0);
++		extra |= BIT(4);
+ 		sdhci_writel(host, extra, DWCMSHC_HOST_CTRL3);
+ 
+ 		/* reset the clock phase when the frequency is lower than 100MHz */
+@@ -562,6 +563,29 @@
+ 	}
+ 
+ 	/*
++	 * The kernel enables every clock listed in the device tree
++	 * (devm_clk_bulk_get_optional + clk_bulk_prepare_enable: core, bus,
++	 * axi, block, timer).  This driver only ever set the rate of clock
++	 * index 0 and never enabled any gate: after a CRU reset leaves the
++	 * aclk/bclk/tmclk gates closed the controller still answers register
++	 * access, but no clock reaches the card, which looks exactly like
++	 * the "Card did not respond" (-95) seen on every boot.  Enable all
++	 * declared clocks, mirroring the kernel.  A separate struct keeps
++	 * clk (index 0) intact for prv->emmc_clk below.
++	 */
++	{
++		struct clk c;
++		int i;
++
++		for (i = 0;; i++) {
++			ret = clk_get_by_index(dev, i, &c);
++			if (ret)
++				break;
++			clk_enable(&c);
++		}
++	}
++
++	/*
+ 	 * The kernel's rk35xx_sdhci_reset() pulses all device-tree reset
+ 	 * controls (core/bus/axi/block/timer) on SDHCI_RESET_ALL; a host
+ 	 * left wedged by earlier boot stages only recovers after that

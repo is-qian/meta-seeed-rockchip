@@ -1,0 +1,84 @@
+From: Balena RK3588 integration
+Subject: [PATCH] rockchip_sdhci: mux the shared eMMC/FSPI pads back to eMMC (U-Boot proper only)
+
+eMMC and FSPI-m0 share the GPIO2A/GPIO2D pads on RK3588 (emmc = iomux
+function 1, fspi = 2, gpio/reset = 0).  The SPI-NOR boot chain leaves
+those pads outside the emmc function, so every mmc 0 init talks to pads
+the card cannot hear and init fails with "Card did not respond to
+voltage select" (-95) in SPL and U-Boot proper.  Linux does not have
+the problem because its pinctrl applies the emmc pinconf from DT.
+
+U-Boot proper only: the SPL still has to load its FIT from the SPI-NOR
+over those same pads, so muxing them to eMMC inside the SPL cuts the
+NOR off and the boot dies before U-Boot proper.  After the switch the
+NOR is unreachable, which is fine because U-Boot proper no longer
+needs it.
+
+Perform the same six IOC writes board_set_iomux(IF_TYPE_MMC, 0, 0)
+does in the mach-rockchip board code - iomux back to emmc plus the
+vendor drive strengths (data/cmd 50ohm, clock 25ohm) - plus the pin
+bias from the kernel pinconf (pcfg_pull_up_drv_level_2 on cmd/clk/
+data, pull_none on strobe/rstn): without the pulls the bus enumerates
+at 400 kHz but block reads time out once the clock is raised.  The
+previous pad state is printed (rate limited).
+
+Upstream-Status: Pending
+
+--- a/drivers/mmc/rockchip_sdhci.c
++++ b/drivers/mmc/rockchip_sdhci.c
+@@ -586,6 +586,55 @@
+ 	}
+ 
+ 	/*
++	 * eMMC and FSPI-m0 share the GPIO2A/GPIO2D pads on RK3588 (emmc =
++	 * iomux function 1, fspi = 2, gpio/reset = 0).  The SPI-NOR boot
++	 * chain leaves them outside the emmc function, so every mmc 0 init
++	 * talks to pads the card cannot hear ("Card did not respond", -95).
++	 * Linux does not have the problem because its pinctrl applies the
++	 * emmc pinconf from DT.
++	 *
++	 * U-Boot proper only: the SPL still has to load its FIT from the
++	 * SPI-NOR over those same pads, so muxing them to eMMC inside the
++	 * SPL cuts off the NOR and the boot dies before U-Boot proper.
++	 * After the switch the NOR is unreachable; U-Boot proper no longer
++	 * needs it.  Perform the same six IOC writes
++	 * board_set_iomux(IF_TYPE_MMC, 0, 0) does in the mach-rockchip
++	 * board code - iomux back to emmc plus the vendor drive strengths
++	 * (data/cmd 50ohm, clock 25ohm) - and report the previous state.
++	 */
++#ifndef CONFIG_SPL_BUILD
++	{
++		void __iomem *bus_ioc = (void __iomem *)0xfd5f8000;
++		void __iomem *emmc_ioc = (void __iomem *)0xfd5fd000;
++		static int dumped;
++
++		if (dumped++ < 2) {
++			printf("%s: pad iomux before gpio2a_l %08x gpio2d_l %08x gpio2d_h %08x ds %08x %08x %08x\n",
++			       dev->name,
++			       readl(bus_ioc + 0x40), readl(bus_ioc + 0x58),
++			       readl(bus_ioc + 0x5c),
++			       readl(emmc_ioc + 0x40), readl(emmc_ioc + 0x58),
++			       readl(emmc_ioc + 0x5c));
++		}
++		writel(0x00770052, emmc_ioc + 0x40);
++		writel(0x77772222, emmc_ioc + 0x58);
++		writel(0x77772222, emmc_ioc + 0x5c);
++		writel(0xffff1111, bus_ioc + 0x40);
++		writel(0xffff1111, bus_ioc + 0x58);
++		writel(0xffff1111, bus_ioc + 0x5c);
++		/*
++		 * Pin bias, mirroring the kernel pinconf
++		 * (pcfg_pull_up_drv_level_2 on cmd/clk/data, pull_none on
++		 * strobe/rstn): pull-up = 01, two bits per pin.  Without
++		 * the pulls the bus enumerates at 400 kHz but block reads
++		 * time out once the clock is raised.
++		 */
++		writel(0x15, emmc_ioc + 0x120);	/* A0 cmd, A1 clk up; A2 ds, A3 rstn none */
++		writel(0x5555, emmc_ioc + 0x12c);/* D0-D7 up */
++	}
++#endif
++
++	/*
+ 	 * The kernel's rk35xx_sdhci_reset() pulses all device-tree reset
+ 	 * controls (core/bus/axi/block/timer) on SDHCI_RESET_ALL; a host
+ 	 * left wedged by earlier boot stages only recovers after that

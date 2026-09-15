@@ -1,0 +1,111 @@
+From: Balena RK3588 integration
+Subject: [PATCH] rockchip_sdhci: pulse the device-tree reset lines at probe
+
+The kernel's rk35xx_sdhci_reset() (drivers/mmc/host/sdhci-of-dwcmshc.c)
+asserts and deasserts every reset control named in the device tree
+(resets/reset-names: core, bus, axi, block, timer) whenever it performs
+SDHCI_RESET_ALL.  On boards whose earlier boot stages leave the eMMC host
+controller wedged, that pulse is what recovers the host: Linux enumerates
+the card while this vendor U-Boot driver, which never touches the resets,
+fails every mmc 0 init with "Card did not respond to voltage select"
+(-95) in both SPL and U-Boot proper.
+
+Mirror the kernel sequence, not just the pulse:
+
+- assert every declared reset line, hold 1 us, then release them all
+  (the kernel holds a reset_control_array, so the lines move as a group
+  instead of being pulsed one at a time);
+- run the SDHCI software reset afterwards -- that is what clears the
+  command/data state machines and their PRESENT_STATE inhibit bits;
+- re-enable the vendor internal clock gate (DWCMSHC_EMMC_MISC_CON bit 1)
+  which the CRU pulse wipes.
+
+Without the two post-pulse steps the first rockchip_emmc_set_clock()
+after probe stalls with "Timeout to wait cmd & data inhibit" and every
+command escalates into a busy timeout, which is what the 11:52 batch
+showed on the board.  The DM reset API is already enabled for both
+U-Boot proper and SPL in the board defconfig, so the same code path
+covers both stages.
+
+Upstream-Status: Pending
+
+diff --git a/drivers/mmc/rockchip_sdhci.c b/bsp/rockchip-sdk/source/u-boot/drivers/mmc/rockchip_sdhci.c
+index 373b634a9..9c36ce6d4 100644
+--- a/drivers/mmc/rockchip_sdhci.c
++++ b/drivers/mmc/rockchip_sdhci.c
+@@ -14,6 +14,7 @@
+ #include <malloc.h>
+ #include <mapmem.h>
+ #include <sdhci.h>
++#include <reset.h>
+ #include <clk.h>
+ #include <syscon.h>
+ #include <dm/ofnode.h>
+@@ -59,6 +60,9 @@ DECLARE_GLOBAL_DATA_PTR;
+ #define DWCMSHC_EMMC_DLL_TXCLK		0x808
+ #define DWCMSHC_EMMC_DLL_STRBIN		0x80c
+ #define DECMSHC_EMMC_DLL_CMDOUT		0x810
++/* Same register the kernel driver calls DECMSHC_EMMC_MISC_CON. */
++#define DWCMSHC_EMMC_MISC_CON		0x81c
++#define DWCMSHC_MISC_INTCLK_EN		BIT(1)
+ #define DWCMSHC_EMMC_DLL_STATUS0	0x840
+ #define DWCMSHC_EMMC_DLL_STATUS1	0x844
+ #define DWCMSHC_EMMC_DLL_START		BIT(0)
+@@ -557,6 +561,57 @@ static int rockchip_sdhci_probe(struct udevice *dev)
+ 		printf("%s fail to get clk\n", __func__);
+ 	}
+ 
++	/*
++	 * The kernel's rk35xx_sdhci_reset() pulses all device-tree reset
++	 * controls (core/bus/axi/block/timer) on SDHCI_RESET_ALL; a host
++	 * left wedged by earlier boot stages only recovers after that
++	 * pulse.  This driver never touched the resets, so mmc 0 init
++	 * failed with "Card did not respond to voltage select" (-95) even
++	 * though the same chip enumerates fine under Linux.  Mirror the
++	 * kernel sequence exactly: the reset lines are asserted and
++	 * released as a group (the kernel holds a reset_control_array),
++	 * then the SDHCI software reset clears the command/data state
++	 * machines (the inhibit bits), and finally the vendor internal
++	 * clock gate wiped by the CRU pulse is re-enabled.  Without those
++	 * two post-pulse steps the first rockchip_emmc_set_clock() stalls
++	 * with "Timeout to wait cmd & data inhibit" and every command
++	 * ends in a busy timeout.
++	 */
++	{
++		struct reset_ctl rst;
++		u32 extra = sdhci_readl(host, DWCMSHC_EMMC_MISC_CON);
++		unsigned long timeout;
++		int i, count;
++
++		for (i = 0;; i++) {
++			ret = reset_get_by_index(dev, i, &rst);
++			if (ret)
++				break;
++			reset_assert(&rst);
++		}
++		count = i;
++		udelay(1);
++		for (i = 0; i < count; i++) {
++			reset_get_by_index(dev, i, &rst);
++			reset_deassert(&rst);
++		}
++
++		sdhci_writeb(host, SDHCI_RESET_ALL, SDHCI_SOFTWARE_RESET);
++		timeout = 100;
++		while (sdhci_readb(host, SDHCI_SOFTWARE_RESET) & SDHCI_RESET_ALL) {
++			if (timeout == 0) {
++				printf("%s: Reset 0x%x never completed.\n",
++				       __func__, (int)SDHCI_RESET_ALL);
++				break;
++			}
++			timeout--;
++			udelay(1000);
++		}
++
++		sdhci_writel(host, DWCMSHC_MISC_INTCLK_EN | extra,
++			     DWCMSHC_EMMC_MISC_CON);
++	}
++
+ 	prv->emmc_clk = clk;
+ 	prv->dev = dev;
+ 	ret = data->get_phy(dev);

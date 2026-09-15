@@ -8,16 +8,23 @@ SRC_URI:append = " \
     file://${MACHINE}_defconfig \
     file://${RK_SOC_FAMILY}-${MACHINE}.dts \
     file://${RK_SOC_FAMILY}-maskrom.ini \
+    file://0001-fs-fat-fix-wrong-casting-to-unsigned-value-of-sect_t.patch \
     file://0002-rk3588-charge-animation-initialize-status.patch \
-    file://0001-rockchip-use-python3-for-fit-generator.patch \
-    file://0100-rkflash-sfc-unaligned-write.patch \
-    file://0102-fit-restore-optee-node.patch \
-    file://0103-spi-nor-ids-carry-zbit-entries.patch \
+    file://0003-rockchip-use-python3-for-fit-generator.patch \
+    file://0005-rkflash-sfc-unaligned-write.patch \
+    file://0007-fit-restore-optee-node.patch \
+    file://0008-spi-nor-ids-carry-zbit-entries.patch \
+    file://0009-nvme-scan-pci-before-probe.patch \
+"
+SRC_URI:append:rk3588 = " \
+    file://0010-rk3588-sdhci-reset.patch \
+    file://0011-rk3588-sdhci-enable-clocks.patch \
+    file://0012-rk3588-sdhci-mux-emmc-pads.patch \
 "
 SRC_URI:append:rk3576 = " \
     file://rk3576-usbplug-board.config \
-    file://0005-rk3576-usbplug-guard-scsi-bootdev.patch \
-    file://0101-usbplug-defconfig-spi-flash-vendors.patch \
+    file://0004-rk3576-usbplug-guard-scsi-bootdev.patch \
+    file://0006-usbplug-defconfig-spi-flash-vendors.patch \
 "
 
 # Firmware and loader tooling come from the pinned official rkbin recipe;
