@@ -41,6 +41,28 @@ jobs:
       - name: Checkout layer
         uses: actions/checkout@v5
 
+      - name: Free up runner disk space
+        run: |
+          # Pattern from Seeed-Studio/meta-seeed-cm4: strip the large
+          # preinstalled toolchains and images the Yocto build never
+          # uses.  The runner only has ~20 GiB free on /, and a cold
+          # Wrynose build needs most of it.  Tolerate missing packages:
+          # the ubuntu-24.04 image no longer ships many of them.
+          sudo apt-get remove -yq \
+            '^dotnet-.*' '^llvm-.*' 'php.*' \
+            azure-cli google-cloud-sdk firefox google-chrome-stable \
+            powershell mono-complete > /dev/null 2>&1 || true
+          sudo apt-get autoremove -y > /dev/null 2>&1 || true
+          sudo apt-get clean
+          sudo rm -rf "${AGENT_TOOLSDIRECTORY:-/opt/hostedtoolcache}" \
+            /usr/local/lib/android /usr/local/share/boost \
+            /usr/share/dotnet /usr/share/swift \
+            /opt/ghc /usr/local/.ghcup
+          # Preloaded container images (~3 GiB); nothing in this job
+          # uses docker.
+          sudo docker image prune -af > /dev/null 2>&1 || true
+          df -h /
+
       - name: Install Yocto host dependencies
         run: |
           sudo apt-get update
